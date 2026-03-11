@@ -1,0 +1,84 @@
+#
+import numpy as np
+import open3d as o3d
+import open3d.visualization.gui as gui
+import open3d.visualization.rendering as rendering
+
+from tqdm import tqdm
+
+import torch
+torch.backends.cudnn.benchmark = True
+from torch.nn import CrossEntropyLoss
+from torch.optim import Adam
+from torch.utils.data import DataLoader
+from model.bimnet import BIMNet
+from dataloaders.PCSdataset import PCSDataset
+
+if __name__ == '__main__':
+
+    cube_edge = 256
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    model = BIMNet()
+    model.load_state_dict(torch.load("log/train_pcs_test/latest.pth"))
+    model.to('cuda')
+
+    dset = PCSDataset(cube_edge=cube_edge,
+                      augment=False,
+                      split='val')
+
+    ids = np.indices((cube_edge, cube_edge, cube_edge)).reshape(3, -1).T # 24.12.29 추정 : 3D 공간의 각 점의 좌표를 나타냄 / T : Transpose / -1 : 자동계산
+
+    # ids 전체 크기 확인
+    print(f"ids shape: {ids.shape}")
+
+    # ids의 첫 3개 행 출력
+    print("First 3 rows of ids:")
+    print(ids[:3])
+
+    with torch.no_grad():
+        for x, y in dset:
+            y -= 1
+            print(f"x: {x.shape}, y: {y.shape}")
+            cy = dset.color_label(y).reshape(-1, 3) # 24.12.29 추정 : 각 점(포인트)의 Ground Truth 색상 정보
+            my = y.flatten()>=0 # 24.12.29 추정 : 유효한 점인지 여부를 나타내는 불리언 마스크(Boolean Mask).
+            print(f"dset.color_label(y): {dset.color_label(y).shape},cy: {cy.shape}, my: {my.shape}")
+            # 모든 배열의 크기 동기화
+            min_size = min(ids.shape[0], cy.shape[0], my.shape[0])
+            ids = ids[:min_size]  # ids 크기 조정
+            cy = cy[:min_size, :]  # cy 크기 조정
+            my = my[:min_size]  # my 크기 조정
+            print(f"ids: {ids.shape}, cy: {cy.shape}, my: {my.shape}")
+
+            #unsqueeze(dim)은 지정한 차원에 하나의 차원(크기 1)을 추가합니다.
+            #x가 3D 데이터라면, [256, 256, 256] → [1, 256, 256, 256]으로 변환.
+            x = x.to(device).unsqueeze(0)
+            #squeeze(dim=None)은 크기가 1인 차원을 제거합니다.
+            #x를 모델에 입력. 출력 크기: [1, C, 256, 256, 256] (예: C는 클래스 수).
+            #출력 텐서의 클래스 축(dim=1)에서 가장 높은 값을 가진 인덱스를 반환. 결과 크기: [1, 256, 256, 256].
+            #배치 차원(크기 1)을 제거. 결과 크기: [256, 256, 256]. GPU 텐서를 CPU 텐서로 변환.
+            p = model(x).argmax(dim=1).squeeze(0).cpu()
+            cp = dset.color_label(p).reshape(-1, 3)
+
+            # 24.12.29 추정 : y : Ground Truth 데이터, 즉 실제 레이블 데이터. pcd: Point Cloud(점 구름). 3D 공간의 점으로 구성된 데이터. 즉 3D 좌표 데이터.
+            ypcd = o3d.geometry.PointCloud() # 빈 PointCloud 객체 생성
+            ypcd.points = o3d.utility.Vector3dVector(ids[my]) # 좌표 설정
+            ypcd.colors = o3d.utility.Vector3dVector(cy[my,:3]) # 색상 설정
+            print(f"ypcd.points: {np.asarray(ypcd.points).shape}, ypcd.colors: {np.asarray(ypcd.colors).shape}")
+
+            # 24.12.29 추정 : p: Prediction 데이터, 즉 모델이 예측한 클래스 레이블 데이터. pcd: Point Cloud(점 구름). 3D 공간의 점으로 구성된 데이터. 즉 모델의 예측 결과를 기반으로 생성된 포인트 클라우드
+            ppcd = o3d.geometry.PointCloud() # 빈 PointCloud 객체 생성
+            ppcd.points = o3d.utility.Vector3dVector(ids[my])  # 좌표 설정 (ypcd와 동일)
+            ppcd.colors = o3d.utility.Vector3dVector(cp[my,:3]) # 색상 설정
+
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(width=1280, height=640)
+            vis.add_geometry(ypcd)
+            vis.run()
+
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(width=1280, height=640)
+            vis.add_geometry(ppcd)
+            vis.run()
+
+            vis.destroy_window()
