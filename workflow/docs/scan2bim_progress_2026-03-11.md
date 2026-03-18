@@ -15,7 +15,7 @@ Current working direction:
 
 ## What Was Added
 ### 1. Semantic inference entrypoint
-File: `infer_pointcloud.py`
+File: `workflow/scripts/infer_pointcloud.py`
 
 Purpose:
 - Read local point clouds from `.pcd`, `.ply`, `.txt`, `.csv`
@@ -30,7 +30,7 @@ Current output:
 - optional `<name>_predicted.npz`
 
 ### 2. BIM candidate exporter
-File: `export_bim_candidates.py`
+File: `workflow/scripts/export_bim_candidates.py`
 
 Purpose:
 - Read labeled `.ply`
@@ -49,7 +49,7 @@ Main exported geometry styles:
 - door / window / stair: profile + width/height style payload
 
 ### 3. Revit importer scaffold
-File: `revit_import_bim_candidates.py`
+File: `workflow/scripts/revit_import_bim_candidates.py`
 
 Purpose:
 - Load exported BIM candidate JSON inside Revit
@@ -74,11 +74,11 @@ Target runtime:
 - This produced building-related classes and was suitable for BIM candidate export
 
 ### BIM candidate export tests
-1. Input: `outputs\inference_smoke\highway\highway_predicted.ply`
+1. Input: `workflow\outputs\inference_smoke\highway\highway_predicted.ply`
 - Exported element count: 0
 - Reasonable result because the source is not an architectural scan
 
-2. Input: `outputs\inference_smoke\txt_101\101_predicted.ply`
+2. Input: `workflow\outputs\inference_smoke\txt_101\101_predicted.ply`
 - Exported element count: 9
 - Exported categories:
   - ceiling: 1
@@ -87,7 +87,7 @@ Target runtime:
   - door: 2
 
 Output file:
-- `outputs\inference_smoke\txt_101\101_predicted_bim_candidates.json`
+- `workflow\outputs\inference_smoke\txt_101\101_predicted_bim_candidates.json`
 
 ## Current Pipeline Status
 Working chain now exists as:
@@ -116,24 +116,24 @@ This is the first usable end-to-end prototype in the workspace.
 - Host wall matching and actual hosted family placement still need to be implemented
 
 ## Files Created During This Stage
-- `infer_pointcloud.py`
-- `export_bim_candidates.py`
-- `revit_import_bim_candidates.py`
-- `outputs\inference_smoke\...` test artifacts
+- `workflow/scripts/infer_pointcloud.py`
+- `workflow/scripts/export_bim_candidates.py`
+- `workflow/scripts/revit_import_bim_candidates.py`
+- `workflow\outputs\inference_smoke\...` test artifacts
 
 ## Example Commands
 ### 1. Run semantic inference
 ```bash
-python infer_pointcloud.py --input your_scan.pcd --output-dir outputs\my_scan
+python workflow/scripts/infer_pointcloud.py --input your_scan.pcd --output-dir workflow/outputs/my_scan
 ```
 
 ### 2. Export BIM candidates
 ```bash
-python export_bim_candidates.py --input outputs\my_scan\your_scan_predicted.ply --cluster-voxel-size 0.5
+python workflow/scripts/export_bim_candidates.py --input workflow/outputs/my_scan/your_scan_predicted.ply --cluster-voxel-size 0.5
 ```
 
 ### 3. Import in Revit
-- Open `revit_import_bim_candidates.py` in pyRevit CPython 3
+- Open `workflow/scripts/revit_import_bim_candidates.py` in pyRevit CPython 3
 - Set `JSON_PATH` to the exported candidate JSON file
 - Set `INPUT_UNITS` to match the scan units
 - Run the script inside Revit
@@ -158,7 +158,7 @@ That means the project has moved from "point cloud understanding only" to "early
 A native-first Revit importer was added after this log was first written.
 
 ### 4. Hybrid Revit importer
-File: `revit_import_hybrid_bim_candidates.py`
+File: `workflow/scripts/revit_import_hybrid_bim_candidates.py`
 
 Purpose:
 - Try native Revit creation for walls, floors, and ceilings
@@ -171,5 +171,32 @@ Practical meaning:
   - a native-first hybrid importer for the most important building elements
 
 Current recommended Revit-side test order:
-1. `revit_import_bim_candidates.py` for safest first import
-2. `revit_import_hybrid_bim_candidates.py` when testing native wall / floor / ceiling creation
+1. `workflow/scripts/revit_import_bim_candidates.py` for safest first import
+2. `workflow/scripts/revit_import_hybrid_bim_candidates.py` when testing native wall / floor / ceiling creation
+
+## Update After Workflow Restructure
+The runnable Scan2BIM path was moved under `workflow/`.
+
+Current execution-focused entrypoints are:
+- `workflow/scripts/infer_pointcloud.py`
+- `workflow/scripts/export_bim_candidates.py`
+- `workflow/scripts/revit_import_bim_candidates.py`
+- `workflow/scripts/revit_import_hybrid_bim_candidates.py`
+
+## Update After Context-Preserving Inference Implementation
+`workflow/scripts/infer_pointcloud.py` now supports:
+- `single_cube`
+- `global_local_fusion`
+
+Current `global_local_fusion` behavior:
+- runs a whole-scene global pass
+- generates overlapping `core + halo` windows
+- accumulates local logits per original point
+- fuses local evidence with a weighted global prior
+- exports `confidence` and `vote_count` in the predicted PLY
+- optionally writes `<name>_fusion_debug.json`
+
+Smoke test result:
+- input: `data\HePIC\1_Eremitani\train\101.txt`
+- processed windows: `12`
+- downstream export from fused PLY succeeded

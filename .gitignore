@@ -71,4 +71,6 @@ data/
 *.ply
 
 outputs/
+workflow/outputs/
+workflow/revit2024/session/active_import.json
 *.npz
