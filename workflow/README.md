@@ -1,4 +1,4 @@
-﻿# Scan2BIM Workflow Guide
+# Scan2BIM Workflow Guide
 
 This folder contains the practical Scan2BIM execution path inside the larger research repository.
 
@@ -297,3 +297,12 @@ The highest-value next step is now:
 
 Specification:
 - `workflow/docs/context_preserving_chunked_inference_spec_2026-03-11.md`
+## Upstream Reference
+The workflow in this folder is built on top of the original BIM-Net / Scan-to-BIM research codebase associated with:
+
+Devid Campagnolo, Elena Camuffo, Umberto Michieli, Paolo Borin, Simone Milani, Andrea Giordano,
+"Fully Automated Scan-to-BIM Via Point Cloud Instance Segmentation,"
+IEEE ICIP 2023.
+
+The `workflow/` subtree reorganizes and extends that research code for reproducible inference, BIM candidate export, debugging, and Revit integration.
+

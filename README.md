@@ -62,3 +62,13 @@ This repository is still research-first, but the executable Scan2BIM path is now
 - Revit integration scripts
 
 That separation is the basis for the next step: turning the prototype into a cleaner production-style Scan2BIM pipeline.
+
+## Upstream Reference
+This workspace builds on the original BIM-Net / Scan-to-BIM research codebase associated with:
+
+Devid Campagnolo, Elena Camuffo, Umberto Michieli, Paolo Borin, Simone Milani, Andrea Giordano,
+"Fully Automated Scan-to-BIM Via Point Cloud Instance Segmentation,"
+IEEE ICIP 2023.
+
+This repository contains local workflow packaging and additional prototype tooling on top of that research foundation.
+
