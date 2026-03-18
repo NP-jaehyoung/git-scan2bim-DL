@@ -7,6 +7,9 @@ Strategy:
 - wall / floor / ceiling: try native Revit creation first
 - roof / column / beam / door / window / stair: DirectShape fallback
 - if native creation fails, fall back to DirectShape automatically
+
+Expected upstream exporter:
+- `workflow/scripts/export_bim_candidates.py`
 """
 
 from __future__ import annotations
@@ -257,11 +260,15 @@ def create_directshape(doc, category: str, solid, element_name: str):
 def create_extrusion(profile_points, height, direction=None):
     loops = List[CurveLoop]()
     loops.Add(make_curve_loop(profile_points))
+    extrusion_height = float(height)
     direction_xyz = direction or XYZ.BasisZ
+    if extrusion_height < 0 and direction is None:
+        direction_xyz = XYZ.BasisZ.Negate()
+        extrusion_height = abs(extrusion_height)
     return GeometryCreationUtilities.CreateExtrusionGeometry(
         loops,
         direction_xyz,
-        max(to_internal_length(height), 0.001),
+        max(to_internal_length(extrusion_height), 0.001),
     )
 
 
@@ -344,6 +351,8 @@ def directshape_solid_from_element(element: dict):
     if category in {"floor", "ceiling", "roof"}:
         profile = element["geometry"]["profile"]
         thickness = float(element["dimensions"].get("thickness") or element["revit_params"].get("thickness") or 0.2)
+        if category == "ceiling":
+            thickness = -abs(thickness)
         return create_extrusion(profile, thickness)
 
     if category == "column":

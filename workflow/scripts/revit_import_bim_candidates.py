@@ -4,8 +4,8 @@ Target runtime:
 - pyRevit CPython 3
 
 Workflow:
-1. Run `infer_pointcloud.py`
-2. Run `export_bim_candidates.py`
+1. Run `workflow/scripts/infer_pointcloud.py`
+2. Run `workflow/scripts/export_bim_candidates.py`
 3. Open this script inside pyRevit CPython 3 and run it
 
 This importer is intentionally type-light: it creates DirectShape geometry in
@@ -154,7 +154,12 @@ def make_curve_loop_from_np(points_np) -> object:
 def create_vertical_extrusion(profile_points, height) -> object:
     loops = List[CurveLoop]()
     loops.Add(make_curve_loop(profile_points))
-    return GeometryCreationUtilities.CreateExtrusionGeometry(loops, XYZ.BasisZ, to_internal_length(max(height, 0.001)))
+    direction = XYZ.BasisZ
+    extrusion_height = float(height)
+    if extrusion_height < 0:
+        direction = XYZ.BasisZ.Negate()
+        extrusion_height = abs(extrusion_height)
+    return GeometryCreationUtilities.CreateExtrusionGeometry(loops, direction, to_internal_length(max(extrusion_height, 0.001)))
 
 
 
@@ -295,6 +300,8 @@ def solid_from_element(element: dict):
     if category in {"floor", "ceiling", "roof"}:
         profile = element["geometry"]["profile"]
         thickness = float(element["dimensions"].get("thickness") or element["revit_params"].get("thickness") or 0.2)
+        if category == "ceiling":
+            thickness = -abs(thickness)
         return create_vertical_extrusion(profile, thickness)
 
     if category == "column":

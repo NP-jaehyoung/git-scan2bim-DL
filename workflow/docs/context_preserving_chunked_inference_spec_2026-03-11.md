@@ -3,9 +3,9 @@
 Date: 2026-03-11
 Workspace: D:\2. Area\2. Scan2BIM\1. code
 Related files:
-- infer_pointcloud.py
-- export_bim_candidates.py
-- docs\scan2bim_progress_2026-03-11.md
+- workflow\scripts\infer_pointcloud.py
+- workflow\scripts\export_bim_candidates.py
+- workflow\docs\scan2bim_progress_2026-03-11.md
 
 ## 1. Purpose
 This document specifies the next-generation inference pipeline for large architectural point clouds.
@@ -22,7 +22,7 @@ The goal is to replace the current single-cube inference path with a context-pre
 This specification is focused on semantic inference behavior, not on training changes.
 
 ## 2. Problem Statement
-Current inference in `infer_pointcloud.py` normalizes the entire input point cloud into one fixed voxel cube and performs a single forward pass.
+Current inference in `workflow/scripts/infer_pointcloud.py` normalizes the entire input point cloud into one fixed voxel cube and performs a single forward pass.
 
 Current behavior:
 1. Load full point cloud
@@ -263,7 +263,7 @@ If different windows disagree strongly:
 - class confusion hot spots
 
 ## 12. CLI Specification
-### New CLI options proposed for `infer_pointcloud.py`
+### New CLI options proposed for `workflow/scripts/infer_pointcloud.py`
 | Option | Type | Purpose |
 |---|---|---|
 | `--mode` | enum | `single_cube`, `global_local_fusion` |
@@ -348,7 +348,7 @@ If different windows disagree strongly:
 5. Output must include enough metadata to diagnose disagreement and seam failures.
 
 ## 17. Immediate Recommended Build Order
-1. Extend `infer_pointcloud.py` with `--mode single_cube|global_local_fusion`
+1. Extend `workflow/scripts/infer_pointcloud.py` with `--mode single_cube|global_local_fusion`
 2. Implement overlapping sliding windows without global prior first
 3. Add per-point logit accumulation and vote count
 4. Export fused confidence and debug metadata
@@ -359,7 +359,7 @@ If different windows disagree strongly:
 If implemented correctly, this architecture should:
 - preserve more local geometry from large scans
 - reduce semantic discontinuity at window boundaries
-- produce better wall/floor/column candidates for `export_bim_candidates.py`
+- produce better wall/floor/column candidates for `workflow/scripts/export_bim_candidates.py`
 - improve the quality of Revit-native wall/floor generation downstream
 
 In short:
